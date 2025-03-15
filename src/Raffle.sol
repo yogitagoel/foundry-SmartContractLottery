@@ -115,7 +115,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return (upkeepNeeded, "0x0");
     }
 
-    Raffle__UpkeepNotNeeded private (address balance, uint256 length, uint256 raffleState);
+    Raffle__UpkeepNotNeeded(address balance, uint256 length, uint256 raffleState);
 
 
     function performUpkeep(bytes calldata) external override {
@@ -139,14 +139,21 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
     uint96 public constant MOCK_BASE_FEE = 0.25 ether;
-uint96 public constant MOCK_GAS_PRICE_LINK = 1e9;
-int256 public constant MOCK_WEI_PER_UNIT_LINK = 4e15;
+    uint96 public constant MOCK_GAS_PRICE_LINK = 1e9;
+    int256 public constant MOCK_WEI_PER_UNIT_LINK = 4e15;
 
-vm.startBroadcast();
-VRFCoordinatorV2_5Mock vrfCoordinatorMock = new VRFCoordinatorV2_5Mock(
-    MOCK_BASE_FEE,
+    vm.startBroadcast();
     MOCK_GAS_PRICE_LINK,
     MOCK_WEI_PER_UNIT_LINK,
+    return NetworkConfig({
+    entranceFee: 0.01 ether,
+    interval: 30,
+    vrfCoordinator: address(vrfCoordinatorMock),
+    gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
+    subscriptionId: 0,
+    callbackGasLimit: 500_000,
+
+});
 );
 
 vm.stopBroadcast();

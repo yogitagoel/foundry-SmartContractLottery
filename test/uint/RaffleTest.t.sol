@@ -8,15 +8,36 @@ import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 contract RaffleTest is Test {
-    function testRaffleInitializesInOpenState() public view {
-        assert(raffle.getRaffleState() == Raffle.RaffleState.OPEN);
-    }
+    Raffle public raffle;
+    HelperConfig public helperConfig;
 
-    function testRaffleRevertsWHenYouDontPayEnough() public {
-        // Arrange
-        vm.prank(PLAYER);
-        // Act / Assert
-        vm.expectRevert(Raffle.Raffle__NotEnoughEthSent.selector);
-        raffle.enterRaffle();
+    uint256 entranceFee;
+    uint256 interval;
+    address vrfCoordinator;
+    bytes32 gasLane;
+    uint256 subscriptionId;
+    uint32 callbackGasLimit;
+
+    address public PLAYER = makeAddr("player");
+    uint256 public constant STARTING_USER_BALANCE = 10 ether;
+
+    function setUp() external {
+        DeployRaffle deployer = new DeployRaffle();
+        (raffle, helperConfig) = deployer.run();
+        vm.deal(PLAYER, STARTING_USER_BALANCE);
+
+        (
+            entranceFee,
+            interval,
+            vrfCoordinator,
+            gasLane,
+            subscriptionId,
+            callbackGasLimit
+        ) = helperConfig.getConfig();
+
+        function testRaffleInitializesInOpenState() public view {
+    assert(raffle.getRaffleState() == Raffle.RaffleState.OPEN);
+
+}
     }
 }

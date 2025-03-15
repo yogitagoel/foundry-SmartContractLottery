@@ -16,11 +16,7 @@ contract HelperConfig is Script {
     NetworkConfig public localNetworkConfig;
 
     constructor() {
-        if (block.chainid == 11155111) {
-            localNetworkConfig = getSepoliaEthConfig();
-        } else {
-            localNetworkConfig = getOrCreateAnvilEthConfig();
-        }
+        networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getSepoliaEthConfig();
     }
 
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory) {
@@ -35,12 +31,30 @@ contract HelperConfig is Script {
             });
     }
 
-    function getOrCreateAnvilEthConfig()
-        public
-        returns (NetworkConfig memory anvilNetworkConfig)
-    {
-        if (localNetworkConfig.vrfCoordinator != address(0)) {
-            return config;
-        }
+    function getLocalConfig() public pure returns (NetworkConfig memory) {
+        return
+            NetworkConfig({
+                entranceFee: 0.01 ether,
+                interval: 30,
+                vrfCoordinator: address(0),
+                gasLane: "",
+                callbackGasLimit: 500000,
+                subscriptionId: 0
+            });
     }
+
+    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
+    if (localNetworkConfig.vrfCoordinator != address(0)) {
+        return localNetworkConfig;
+}
+
+    function getConfigByChainId(uint256 chainId) public view returns (NetworkConfig memory) {
+    if (networkConfigs[chainId].vrfCoordinator != address(0)) {
+        return networkConfigs[chainId];
+    } else if (chainId == LOCAL_CHAIN_ID) {
+        return getOrCreateAnvilEthConfig();
+    } else {
+        revert HelperConfig__InvalidChainId();
+    }
+}
 }

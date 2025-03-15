@@ -2,9 +2,10 @@
 
 pragma solidity ^0.8.18;
 
-import {VRFCoordinatorV2Interface} from "@chainlink/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
-import {VRFConsumerBaseV2} from "@chainlink/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-import {AutomationCompatibleInterface} from "chainlink/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
+
 
 // Layout of the contract file:
 // version
@@ -32,7 +33,7 @@ import {AutomationCompatibleInterface} from "chainlink/src/v0.8/automation/inter
 
 error Raffle_NotEnoughEthSent();
 
-contract Raffle is VRFConsumerBaseV2 {
+contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     error Raffle__NotEnoughEthSent();
     error Raffle__TransferFailed();
     error Raffle__RaffleNotOpen();
@@ -114,6 +115,9 @@ contract Raffle is VRFConsumerBaseV2 {
         return (upkeepNeeded, "0x0");
     }
 
+    Raffle__UpkeepNotNeeded private (address balance, uint256 length, uint256 raffleState);
+
+
     function performUpkeep(bytes calldata) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
@@ -133,7 +137,26 @@ contract Raffle is VRFConsumerBaseV2 {
         );
     }
 
+    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
+    uint96 public constant MOCK_BASE_FEE = 0.25 ether;
+uint96 public constant MOCK_GAS_PRICE_LINK = 1e9;
+int256 public constant MOCK_WEI_PER_UNIT_LINK = 4e15;
+
+vm.startBroadcast();
+VRFCoordinatorV2_5Mock vrfCoordinatorMock = new VRFCoordinatorV2_5Mock(
+    MOCK_BASE_FEE,
+    MOCK_GAS_PRICE_LINK,
+    MOCK_WEI_PER_UNIT_LINK,
+);
+
+vm.stopBroadcast();
+
     function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
     }
+
+    function getRaffleState() public view returns (RaffleState) {
+    return s_raffleState;
+    }
+
 }

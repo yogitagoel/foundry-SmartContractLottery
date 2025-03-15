@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.18;
 
-import {VRFCoordinatorV2Interface} from "chainlink/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+import {VRFCoordinatorV2Interface} from "@chainlink/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 
-import {VRFConsumerBaseV2} from "chainlink/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import {VRFConsumerBaseV2} from "@chainlink/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 // Layout of the contract file:
 // version
 // imports
 // errors
 // interfaces, libraries, contract
-
+ 
 // Inside Contract:
 // Type declarations
 // State variables

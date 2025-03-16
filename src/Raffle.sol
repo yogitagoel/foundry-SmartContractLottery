@@ -6,7 +6,6 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 
-
 // Layout of the contract file:
 // version
 // imports
@@ -42,6 +41,11 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint256 numPlayers,
         uint256 raffleState
     );
+    error Raffle__UpkeepNotNeeded(
+        address balance,
+        uint256 length,
+        uint256 raffleState
+    );
 
     enum RaffleState {
         OPEN,
@@ -66,6 +70,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     event EnteredRaffle(address indexed player);
     event PickedWinner(address winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     constructor(uint256 entranceFee, uint256 interval) {
         i_entranceFee = entranceFee;
@@ -115,9 +120,6 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return (upkeepNeeded, "0x0");
     }
 
-    Raffle__UpkeepNotNeeded(address balance, uint256 length, uint256 raffleState);
-
-
     function performUpkeep(bytes calldata) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
@@ -128,42 +130,43 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
             );
         }
         s_raffleState = RaffleState.CALCULATING;
-        uint256 requestId = i_vrfCoordinator.requestRandomWords(
-            i_gasLane,
-            i_subscriptionId,
-            REQUEST_CONFIRMATIONS,
-            i_callbackGasLimit,
-            NUM_WORDS
-        );
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
+            .RandomWordsRequest({
+                keyHash: i_keyHash,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
+            });
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+
+        emit RequestedRaffleWinner(requestId);
     }
 
-    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
-    uint96 public constant MOCK_BASE_FEE = 0.25 ether;
-    uint96 public constant MOCK_GAS_PRICE_LINK = 1e9;
-    int256 public constant MOCK_WEI_PER_UNIT_LINK = 4e15;
-
-    vm.startBroadcast();
-    MOCK_GAS_PRICE_LINK,
-    MOCK_WEI_PER_UNIT_LINK,
-    return NetworkConfig({
-    entranceFee: 0.01 ether,
-    interval: 30,
-    vrfCoordinator: address(vrfCoordinatorMock),
-    gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
-    subscriptionId: 0,
-    callbackGasLimit: 500_000,
-
-});
-);
-
-vm.stopBroadcast();
+    function getPlayer(uint256 indexOfPlayer) external view returns (address) {
+        return s_players[indexOfPlayer];
+    }
 
     function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
     }
 
     function getRaffleState() public view returns (RaffleState) {
-    return s_raffleState;
+        return s_raffleState;
     }
 
+    function getRecentWinner() public view returns (address) {
+        return s_recentWinner;
+    }
+
+    function getNumberOfPlayers() public view returns (uint256) {
+        return s_players.length;
+    }
+
+    function getLastTimeStamp() public view returns (uint256) {
+        return s_lastTimeStamp;
+    }
 }

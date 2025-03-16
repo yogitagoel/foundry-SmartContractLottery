@@ -6,6 +6,7 @@ import {DeployRaffle} from "../../script/DeployRaffle.s.sol";
 import {Raffle} from "../../src/Raffle.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {LinkToken} from "test/mocks/LinkToken.sol";
 
 contract RaffleTest is Test {
     Raffle public raffle;
@@ -33,6 +34,7 @@ contract RaffleTest is Test {
         gasLane = config.gasLane;
         callbackGasLimit = config.callbackGasLimit;
         subscriptionId = config.subscriptionId;
+        linkToken = LinkToken(config.linkToken);
 
         vm.deal(PLAYER, STARTING_PLAYER_BALANCE);
     }
@@ -62,16 +64,37 @@ contract RaffleTest is Test {
     }
 
     function testDontAllowPlayersToEnterWhileRaffleIsCalculating() public {
-        // Arrange
         vm.prank(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
         raffle.performUpkeep("");
-
-        // Act / Assert
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
         vm.prank(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
+    }
+
+    function testCheckUpkeepReturnsFalseIfItHasNoBalance() public {
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
+        vm.roll(block.number + 1);
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+        assert(!upkeepNeeded);
+    }
+
+    function testCheckUpkeepReturnsFalseIfRaffleIsntOpen() public {
+        // Arrange
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: raffleEntranceFee}();
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
+        vm.roll(block.number + 1);
+        raffle.performUpkeep("");
+        Raffle.RaffleState raffleState = raffle.getRaffleState();
+
+        // Act
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+
+        // Assert
+        assert(raffleState == Raffle.RaffleState.CALCULATING);
+        assert(upkeepNeeded == false);
     }
 }

@@ -11,8 +11,12 @@ import {Vm} from "forge-std/Vm.sol";
 import {VRFCoordinatorV2_5Mock} from "chainlink/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract RaffleTest is Test {
+
+    event EnteredRaffle(address indexed player);
+
     Raffle public raffle;
     HelperConfig public helperConfig;
+
 
     uint256 entranceFee;
     uint256 interval;
@@ -20,33 +24,35 @@ contract RaffleTest is Test {
     bytes32 gasLane;
     uint256 subscriptionId;
     uint32 callbackGasLimit;
+    address link;
+    uint256 deployerKey;
 
     address public PLAYER = makeAddr("player");
     uint256 public constant STARTING_USER_BALANCE = 10 ether;
 
-    modifier raffleEntredAndTimePassed() {
-        vm.prank(PLAYER);
-        raffle.enterRaffle{value: entranceFee}();
-        vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
+    modifier skipFork() {
+        if (block.chainid != 31337){
+            return;
+        }
         _;
     }
 
-    event EnteredRaffle(address indexed player);
-
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
-        (raffle, helperConfig) = deployer.deployContract();
-        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
-        entranceFee = config.entranceFee;
-        interval = config.interval;
-        vrfCoordinator = config.vrfCoordinator;
-        gasLane = config.gasLane;
-        callbackGasLimit = config.callbackGasLimit;
-        subscriptionId = config.subscriptionId;
-        linkToken = LinkToken(config.linkToken);
+        (raffle, helperConfig) = deployer.run();
+        vm.deal(PLAYER, STARTING_USER_BALANCE);
 
-        vm.deal(PLAYER, STARTING_PLAYER_BALANCE);
+        (
+            entranceFee,
+            interval,
+            vrfCoordinator,
+            gasLane,
+            subscriptionId,
+            callbackGasLimit,
+            link,
+            deployerKey
+
+        ) = helperConfig.getConfig();
     }
 
     function testRaffleInitializesInOpenState() public view {
@@ -170,7 +176,6 @@ contract RaffleTest is Test {
         public
         raffleEnteredAndTimePassed
     {
-        // Arrange
 
         uint256 additionalEntrants = 3;
         uint256 startingIndex = 1;
@@ -187,20 +192,16 @@ contract RaffleTest is Test {
 
         uint256 prize = entranceFee * (additionalEntrants + 1);
         uint256 winnerStartingBalance = expectedWinner.balance;
-
-        // Act
         vm.recordLogs();
-        raffle.performUpkeep(""); // emits requestId
+        raffle.performUpkeep("");
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        bytes32 requestId = entries[1].topics[1];
+        bytes32 requestId = entries[1].topics[1];\
 
-        // Pretend to be Chainlink VRF
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
             uint256(requestId),
             address(raffle)
         );
 
-        // Assert
         address recentWinner = raffle.getRecentWinner();
         Raffle.RaffleState raffleState = raffle.getRaffleState();
         uint256 winnerBalance = recentWinner.balance;

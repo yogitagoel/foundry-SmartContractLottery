@@ -1,2 +1,2 @@
 
-# Proveably Random Raffle Contracts
+##Smart Contract Lottery System
